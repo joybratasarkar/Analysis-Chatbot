@@ -1,0 +1,39 @@
+version: '3.8'
+
+services:
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    environment:
+      - REDIS_PASSWORD=${REDIS_PASSWORD:-securepassword123}
+    command: redis-server --requirepass ${REDIS_PASSWORD:-securepassword123}
+    volumes:
+      - redis_data:/data
+    networks:
+      - chatbot_network
+
+  chatbot:
+    build: .
+    ports:
+      - "8000:8000"
+    environment:
+      - REDIS_URL=${REDIS_URL:-redis://:${REDIS_PASSWORD:-securepassword123}@redis:6379/0}
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - REDIS_PASSWORD=${REDIS_PASSWORD:-securepassword123}
+      - GOOGLE_APPLICATION_CREDENTIALS=/app/xooper.json
+    volumes:
+      - ./xooper.json:/app/xooper.json:ro
+    depends_on:
+      - redis
+    networks:
+      - chatbot_network
+    restart: unless-stopped
+
+volumes:
+  redis_data:
+
+networks:
+  chatbot_network:
+    driver: bridge

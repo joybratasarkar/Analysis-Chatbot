@@ -1,0 +1,9 @@
+
+node_modules/
+venv/
+myvenv/
+dist/
+
+.env
+xooper.json
+xooper.json
