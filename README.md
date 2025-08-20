@@ -415,9 +415,7 @@ Performance Score: 7.1"
 4. Add tests if applicable
 5. Submit a pull request
 
-## 📄 License
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
 ## 🙏 Acknowledgments
 
@@ -430,12 +428,3 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ---
 
-## 🆘 Support
-
-For issues and questions:
-1. Check the [troubleshooting section](#-troubleshooting)
-2. Review application logs in `logs.logs`
-3. Test with the provided `sample_data.csv`
-4. Ensure all prerequisites are installed
-
-**Happy Data Analysis! 🎉📊**# Analysis-Chatbot
