@@ -15,17 +15,40 @@ from langchain_google_vertexai import ChatVertexAI
 from langchain_core.messages import HumanMessage, AIMessage
 
 from llm import get_vertex_ai_llm, get_redis_client
+from guardrails_manager import get_guardrails_manager
 
-# Initialize LLM and Redis
+# Initialize LLM, Redis, and Guardrails
 llm = get_vertex_ai_llm()
 redis_client = get_redis_client(decode_responses=True)
+guardrails = get_guardrails_manager()
 
 class SimpleAIChatbot:
     def __init__(self):
         self.sessions: Dict[str, Dict] = {}
     
     async def process_message(self, session_id: str, message: str, data: Optional[pd.DataFrame] = None) -> Dict[str, Any]:
-        """Process a message and return response"""
+        """Process a message and return response with guardrails protection"""
+        # Process input through guardrails first
+        guardrails_input_result = await guardrails.process_input(
+            user_message=message,
+            context={"session_id": session_id}
+        )
+        
+        # Check if input was blocked by guardrails
+        if not guardrails_input_result.get("is_safe", True):
+            blocked_response = guardrails_input_result.get("guardrails_response", 
+                "I cannot process this request for security reasons. Please try a different approach.")
+            return {
+                "response": blocked_response,
+                "session_id": session_id,
+                "plot_data": None,
+                "generated_code": None,
+                "guardrails_blocked": True
+            }
+        
+        # Use processed message if available
+        processed_message = guardrails_input_result.get("processed_message", message)
+        
         # Initialize or get session
         if session_id not in self.sessions:
             self.sessions[session_id] = {
@@ -39,8 +62,8 @@ class SimpleAIChatbot:
         if data is not None:
             session["data"] = data
         
-        # Add user message
-        session["messages"].append(HumanMessage(content=message))
+        # Add processed user message
+        session["messages"].append(HumanMessage(content=processed_message))
         
         # Process based on content
         if session["data"] is None and any(word in message.lower() for word in ["plot", "chart", "analyze", "visualize"]):
@@ -56,8 +79,23 @@ class SimpleAIChatbot:
             plot_data = None
             generated_code = None
         
+        # Process response through guardrails before sending
+        guardrails_output_result = await guardrails.process_output(
+            bot_response=response,
+            generated_code=generated_code,
+            context={"session_id": session_id}
+        )
+        
+        # Use processed response and code
+        final_response = guardrails_output_result.get("response", response)
+        final_code = guardrails_output_result.get("code", generated_code)
+        
+        # Update response if guardrails modified it
+        if not guardrails_output_result.get("is_safe", True):
+            final_response = "I've modified my response to ensure it meets safety guidelines. " + final_response
+        
         # Add AI response
-        session["messages"].append(AIMessage(content=response))
+        session["messages"].append(AIMessage(content=final_response))
         
         # Store in Redis for persistence
         try:
@@ -73,10 +111,11 @@ class SimpleAIChatbot:
             print(f"Redis error: {e}")
         
         return {
-            "response": response,
+            "response": final_response,
             "plot_data": plot_data,
-            "generated_code": generated_code,
-            "session_id": session_id
+            "generated_code": final_code,
+            "session_id": session_id,
+            "guardrails_active": guardrails.is_active()
         }
     
     async def _analyze_data(self, user_request: str, df: pd.DataFrame) -> tuple:

@@ -20,10 +20,12 @@ from typing_extensions import Annotated, TypedDict
 
 from llm import get_vertex_ai_llm, get_redis_client
 from logging_config import log_code_execution, log_performance_metric, log_error
+from guardrails_manager import get_guardrails_manager
 
-# Initialize LLM and Redis
+# Initialize LLM, Redis, and Guardrails
 llm = get_vertex_ai_llm()
 redis_client = get_redis_client(decode_responses=True)
+guardrails = get_guardrails_manager()
 
 class ChatState(TypedDict):
     messages: Annotated[list, add_messages]
@@ -60,12 +62,31 @@ class SecureAIChatbot:
         return workflow.compile()
     
     async def _process_input(self, state: ChatState) -> ChatState:
-        """Process user input and determine if data processing is needed"""
+        """Process user input through guardrails and determine if data processing is needed"""
         last_message = state["messages"][-1].content
+        
+        # Process input through guardrails
+        guardrails_result = await guardrails.process_input(
+            user_message=last_message,
+            context={"session_id": state["session_id"]}
+        )
+        
+        # Check if input was blocked by guardrails
+        if not guardrails_result.get("is_safe", True):
+            blocked_response = guardrails_result.get("guardrails_response", 
+                "I cannot process this request for security reasons. Please try a different approach.")
+            state["messages"].append(AIMessage(content=blocked_response))
+            return state
+        
+        # Use processed message if available
+        processed_message = guardrails_result.get("processed_message", last_message)
+        if processed_message != last_message:
+            # Update the last message with the processed version
+            state["messages"][-1] = HumanMessage(content=processed_message)
         
         # Check if this is a data-related query
         data_keywords = ["plot", "analyze", "visualize", "chart", "graph", "data", "csv"]
-        needs_data_processing = any(keyword in last_message.lower() for keyword in data_keywords)
+        needs_data_processing = any(keyword in processed_message.lower() for keyword in data_keywords)
         
         if needs_data_processing and state["data"] is None:
             state["messages"].append(AIMessage(content="I'd be happy to help you analyze your data! Please upload a CSV file first."))
@@ -358,7 +379,7 @@ class SecureAIChatbot:
         return "\n".join(stats)
     
     async def _respond(self, state: ChatState) -> ChatState:
-        """Generate final response to user"""
+        """Generate final response to user with guardrails protection"""
         if state["analysis_summary"] and state["plot_result"]:
             response = f"{state['analysis_summary']}\n\n[Visualization generated showing the analysis]"
         elif state["analysis_summary"]:
@@ -369,8 +390,24 @@ class SecureAIChatbot:
             response = "Hello! I'm your AI data analysis assistant. I can help you analyze CSV data, create visualizations, and provide insights. Please upload a CSV file to get started!"
         else:
             response = "I'm ready to help analyze your data. What would you like to explore?"
+        
+        # Process response through guardrails
+        guardrails_result = await guardrails.process_output(
+            bot_response=response,
+            generated_code=state.get("generated_code"),
+            context={"session_id": state["session_id"]}
+        )
+        
+        # Use processed response and code
+        final_response = guardrails_result.get("response", response)
+        if not guardrails_result.get("is_safe", True):
+            final_response = "I've modified my response to ensure it meets safety guidelines. " + final_response
+        
+        # Update generated code if it was sanitized
+        if state.get("generated_code") and guardrails_result.get("code") != state["generated_code"]:
+            state["generated_code"] = guardrails_result.get("code")
             
-        state["messages"].append(AIMessage(content=response))
+        state["messages"].append(AIMessage(content=final_response))
         return state
     
     def _get_data_info(self, df: pd.DataFrame) -> str:
@@ -419,6 +456,10 @@ class SecureAIChatbot:
         if result["data"] is not None:
             self.sessions[session_id]["data"] = result["data"]
         
+        # Preserve plot result for frontend display
+        if result.get("plot_result"):
+            self.sessions[session_id]["plot_result"] = result["plot_result"]
+        
         # Store in Redis for persistence
         try:
             redis_client.setex(
@@ -432,9 +473,14 @@ class SecureAIChatbot:
         except Exception as e:
             print(f"Redis error: {e}")
         
+        plot_data = result.get("plot_result")
+        print(f"Returning to frontend - plot_data present: {bool(plot_data)}")
+        if plot_data:
+            print(f"Plot data size: {len(plot_data)} chars, starts with: {plot_data[:20]}...")
+        
         return {
             "response": result["messages"][-1].content,
-            "plot_data": result.get("plot_result"),
+            "plot_data": plot_data,
             "generated_code": result.get("generated_code"),
             "session_id": session_id
         }

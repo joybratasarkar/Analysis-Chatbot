@@ -161,6 +161,7 @@ test_*.py
 *_test.py
 debug_*.py
 *_debug.py
+test_guardrails.py
 
 # Backup files
 *.bak

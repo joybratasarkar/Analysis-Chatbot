@@ -17,6 +17,7 @@ from logging_config import (
     log_api_request, log_chat_interaction, log_file_upload, 
     log_performance_metric, log_error
 )
+from guardrails_manager import get_guardrails_manager
 
 app = FastAPI(title="Secure AI Data Analysis Chatbot", version="1.0.0")
 
@@ -268,8 +269,17 @@ async def get_homepage():
                         sessionId = result.session_id;
                         addMessage(result.response, 'bot-message');
                         
+                        console.log('Response received:', {
+                            has_plot_data: !!result.plot_data,
+                            plot_data_length: result.plot_data ? result.plot_data.length : 0,
+                            plot_data_start: result.plot_data ? result.plot_data.substring(0, 50) : 'none'
+                        });
+                        
                         if (result.plot_data) {
+                            console.log('Displaying plot...');
                             displayPlot(result.plot_data);
+                        } else {
+                            console.log('No plot data to display');
                         }
                     } else {
                         addMessage('Sorry, I encountered an error. Please try again.', 'bot-message');
@@ -290,14 +300,20 @@ async def get_homepage():
             }
 
             function displayPlot(plotData) {
+                console.log('displayPlot called with data length:', plotData.length);
+                console.log('Plot data type:', plotData.startsWith('<') ? 'HTML/Plotly' : 'Base64/Matplotlib');
+                
                 const plotArea = document.getElementById('plotArea');
                 if (plotData.startsWith('<')) {
                     // HTML plot (Plotly)
+                    console.log('Creating Plotly iframe...');
                     plotArea.innerHTML = `<iframe srcdoc="${plotData.replace(/"/g, '&quot;')}" width="100%" height="400" frameborder="0"></iframe>`;
                 } else {
                     // Base64 image (Matplotlib)
+                    console.log('Creating Matplotlib image...');
                     plotArea.innerHTML = `<img src="data:image/png;base64,${plotData}" alt="Data Visualization" style="max-width: 100%;">`;
                 }
+                console.log('Plot display completed');
             }
 
             function handleKeyPress(event) {
@@ -445,7 +461,18 @@ async def websocket_endpoint(websocket: WebSocket, session_id: str):
 @app.get("/health")
 async def health_check():
     """Health check endpoint"""
-    return {"status": "healthy", "service": "AI Data Analysis Chatbot"}
+    guardrails = get_guardrails_manager()
+    return {
+        "status": "healthy", 
+        "service": "AI Data Analysis Chatbot",
+        "guardrails": guardrails.get_status()
+    }
+
+@app.get("/guardrails/status")
+async def guardrails_status():
+    """Get detailed guardrails status"""
+    guardrails = get_guardrails_manager()
+    return guardrails.get_status()
 
 if __name__ == "__main__":
     import uvicorn

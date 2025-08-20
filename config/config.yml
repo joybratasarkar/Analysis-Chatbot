@@ -1,0 +1,56 @@
+# Using custom LLM provider - managed by main application
+# No model configuration needed for rule-based guardrails
+
+rails:
+  input:
+    flows:
+      - harmful_input_prevention
+      - sensitive_data_prevention  
+      - injection_prevention
+  output:
+    flows:
+      - prevent_harmful_output
+      - prevent_data_leakage
+      - prevent_unsafe_code
+
+# Safety and security configurations
+colang_version: "1.0"
+
+# Input validation rails
+input_rails:
+  - type: input_check
+    name: "harmful_input_check"
+    description: "Check for harmful, malicious, or inappropriate input"
+  
+  - type: input_check
+    name: "data_privacy_check"
+    description: "Ensure no sensitive personal data is shared inappropriately"
+  
+  - type: input_check
+    name: "injection_check"
+    description: "Detect potential code injection or malicious commands"
+
+# Output validation rails
+output_rails:
+  - type: output_check
+    name: "harmful_output_check"
+    description: "Prevent harmful or inappropriate responses"
+  
+  - type: output_check
+    name: "data_leakage_check"
+    description: "Prevent leakage of sensitive information"
+  
+  - type: output_check
+    name: "code_safety_check"
+    description: "Ensure generated code is safe for execution"
+
+# Custom actions for data analysis context
+custom_actions:
+  - name: validate_data_request
+    description: "Validate data analysis requests for safety"
+  
+  - name: sanitize_code_output
+    description: "Sanitize generated code before execution"
+  
+  - name: check_data_compliance
+    description: "Ensure data processing complies with privacy regulations"

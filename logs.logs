@@ -2,3 +2,52 @@
 # When you ask "Mia Rodriguez", you'll get her actual data:
 # - Age: 24, Salary: 52000, Department: HR, Experience: 1 year, Performance: 7.1
 # Instead of generic made-up statistics about "26 individuals" and "$76,692 average salary"2025-08-20 15:40:18,048 - INFO - api - Logging system initialized
+2025-08-20 23:31:40,488 - INFO - api - Logging system initialized
+2025-08-20 23:32:06,667 - INFO - api - Logging system initialized
+2025-08-20 23:32:29,726 - INFO - api - Logging system initialized
+2025-08-20 23:33:04,492 - INFO - api - Logging system initialized
+2025-08-20 23:33:37,028 - INFO - api - Logging system initialized
+2025-08-20 23:34:07,500 - INFO - api - Logging system initialized
+2025-08-20 23:34:37,805 - INFO - api - Logging system initialized
+2025-08-20 23:35:41,358 - INFO - api - Logging system initialized
+2025-08-20 23:36:02,149 - INFO - api - Logging system initialized
+2025-08-20 23:36:25,786 - INFO - api - Logging system initialized
+2025-08-20 23:39:45,222 - INFO - api - Logging system initialized
+2025-08-20 23:39:47,531 - ERROR - guardrails_manager - Failed to initialize NeMo Guardrails: Unsupported colang version 2.0 for file: /home/joy/Desktop/Batlabs/config/rails.co
+2025-08-20 23:39:55,006 - INFO - api - API Request - POST /upload-csv
+2025-08-20 23:39:55,059 - WARNING - guardrails_manager - Guardrails not initialized, proceeding without protection
+2025-08-20 23:40:00,876 - INFO - chatbot - Code execution - type: no_plot, success: True
+2025-08-20 23:40:03,072 - WARNING - guardrails_manager - Guardrails not initialized, proceeding without protection
+2025-08-20 23:40:03,346 - INFO - api - File upload - sample_data.csv, size: 1004, shape: (26, 6)
+2025-08-20 23:40:05,034 - INFO - api - API Request - POST /chat
+2025-08-20 23:40:05,038 - WARNING - guardrails_manager - Guardrails not initialized, proceeding without protection
+2025-08-20 23:40:13,990 - INFO - chatbot - Code execution - type: plotly, success: True
+2025-08-20 23:40:13,994 - WARNING - guardrails_manager - Guardrails not initialized, proceeding without protection
+2025-08-20 23:40:14,121 - INFO - chatbot - Chat interaction - message_length: 13, has_data: True
+2025-08-20 23:43:17,350 - INFO - api - Logging system initialized
+2025-08-20 23:43:20,399 - INFO - guardrails_manager - Custom security rails initialized successfully
+2025-08-20 23:43:49,210 - INFO - api - Logging system initialized
+2025-08-20 23:43:52,264 - INFO - guardrails_manager - Custom security rails initialized successfully
+2025-08-20 23:44:18,007 - INFO - api - Logging system initialized
+2025-08-20 23:44:19,999 - INFO - guardrails_manager - Custom security rails initialized successfully
+2025-08-20 23:44:37,290 - INFO - api - Logging system initialized
+2025-08-20 23:45:14,191 - INFO - api - Logging system initialized
+2025-08-20 23:45:16,458 - INFO - guardrails_manager - Custom security rails initialized successfully
+2025-08-20 23:45:29,174 - INFO - api - API Request - POST /upload-csv
+2025-08-20 23:45:34,237 - INFO - chatbot - Code execution - type: no_plot, success: True
+2025-08-20 23:45:37,559 - INFO - api - File upload - sample_data.csv, size: 1004, shape: (26, 6)
+2025-08-20 23:45:50,502 - INFO - api - API Request - POST /chat
+2025-08-20 23:45:55,882 - INFO - chatbot - Code execution - type: plotly, success: True
+2025-08-20 23:45:56,086 - INFO - chatbot - Chat interaction - message_length: 13, has_data: True
+2025-08-20 23:49:32,947 - INFO - api - Logging system initialized
+2025-08-20 23:49:36,373 - INFO - guardrails_manager - Custom security rails initialized successfully
+2025-08-20 23:50:27,140 - INFO - api - Logging system initialized
+2025-08-20 23:50:31,122 - INFO - guardrails_manager - Custom security rails initialized successfully
+2025-08-20 23:50:57,280 - INFO - api - Logging system initialized
+2025-08-20 23:51:00,099 - INFO - guardrails_manager - Custom security rails initialized successfully
+2025-08-20 23:51:37,110 - INFO - api - API Request - POST /upload-csv
+2025-08-20 23:51:48,475 - INFO - chatbot - Code execution - type: plotly, success: True
+2025-08-20 23:51:52,860 - INFO - api - File upload - sample_data.csv, size: 1004, shape: (26, 6)
+2025-08-20 23:52:06,608 - INFO - api - API Request - POST /chat
+2025-08-20 23:52:10,835 - INFO - chatbot - Code execution - type: plotly, success: True
+2025-08-20 23:52:10,916 - INFO - chatbot - Chat interaction - message_length: 13, has_data: True

@@ -8,6 +8,7 @@ A production-ready AI-powered data analysis platform that transforms CSV data in
 - **📊 Interactive Visualizations** - Auto-generated Plotly charts and Matplotlib graphs
 - **🤖 AI-Powered Insights** - Powered by Google Gemini 2.0 Flash via Vertex AI
 - **🔒 Secure Code Execution** - Sandboxed Python environment for safe AI-generated code
+- **🛡️ Enterprise Security** - NVIDIA NeMo Guardrails for comprehensive AI safety
 - **⚡ Real-time Processing** - WebSocket support for instant responses
 - **📈 Comprehensive Analytics** - Statistical analysis, trend detection, and pattern recognition
 
@@ -149,6 +150,11 @@ Content-Type: application/json
 GET /health
 ```
 
+### Guardrails Status
+```http
+GET /guardrails/status
+```
+
 ## Docker Deployment
 
 ### Using Docker Compose
@@ -167,11 +173,23 @@ docker run -d -p 8000:8000 \
 
 ## Security Features
 
+- **🛡️ Enterprise Security Rails** - Custom AI safety and security controls inspired by NVIDIA NeMo Guardrails
+- **Real-time Input Validation** - Blocks malicious prompts, code injection, and harmful requests
+- **Output Filtering** - Prevents data leakage, harmful content generation, and unsafe code
+- **Code Safety Validation** - Automatic detection and sanitization of dangerous operations
+- **Privacy Protection** - Filters sensitive information (SSNs, credit cards, passwords)
 - **Sandboxed Code Execution** - AI-generated code runs in restricted environment
 - **Session Management** - UUID-based anonymous sessions
 - **Input Validation** - File size limits and content validation
 - **Temporary Storage** - Data processed in memory, auto-deleted after 1 hour
 - **CORS Protection** - Configurable origin restrictions
+
+### Security Capabilities
+- **Malicious Intent Detection**: Blocks requests containing "hack", "exploit", "steal", etc.
+- **Code Injection Prevention**: Prevents `os.system()`, `exec()`, `eval()`, and similar unsafe operations
+- **Sensitive Data Protection**: Automatically detects and blocks sharing of personal information
+- **Safe Code Generation**: Sanitizes AI-generated code to remove dangerous system calls
+- **Graceful Degradation**: Continues secure operation even if security systems encounter issues
 
 ## Configuration
 

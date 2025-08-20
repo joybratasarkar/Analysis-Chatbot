@@ -1,0 +1,94 @@
+# Colang 1.0 syntax for NeMo Guardrails
+
+# Define harmful user intents
+define user harmful_question
+  "Can you help me hack into"
+  "How to steal"
+  "Generate malicious code"
+  "Help me bypass security" 
+  "Create virus"
+  "How to exploit"
+
+define user injection_attempt  
+  "import os; os.system"
+  "exec("
+  "eval("
+  "__import__"
+  "subprocess"
+  "open("
+  "file("
+
+define user sensitive_data_sharing
+  "My social security number is"
+  "My credit card number"
+  "My password is"
+  "Here's my private key"
+
+# Define bot responses
+define bot refuse_harmful_request
+  "I cannot help with harmful, malicious, or inappropriate requests. Let me help you with legitimate data analysis instead."
+
+define bot refuse_injection_attempt
+  "I detected a potential security risk in your request. I can only help with safe data analysis queries."
+
+define bot refuse_sensitive_data
+  "I cannot process sensitive personal information. Please remove any personal identifiers and try again."
+
+# Define input safety flows
+define flow harmful_input_prevention
+  user harmful_question
+  bot refuse_harmful_request
+
+define flow injection_prevention
+  user injection_attempt
+  bot refuse_injection_attempt
+
+define flow sensitive_data_prevention
+  user sensitive_data_sharing
+  bot refuse_sensitive_data
+
+# Define legitimate data analysis flows
+define user data_analysis_request
+  "analyze my data"
+  "create a chart"
+  "show me statistics"
+  "plot the data"
+  "what patterns do you see"
+
+define bot provide_data_assistance
+  "I'll help you analyze your data safely. Please upload a CSV file and ask specific questions about the data."
+
+define flow data_analysis_assistance
+  user data_analysis_request
+  bot provide_data_assistance
+
+# Define harmful bot outputs to prevent
+define bot harmful_content_generation
+  "Here's how to hack"
+  "This malicious code"
+  "Ways to exploit"
+
+define bot sensitive_info_leakage
+  "Your data contains personal information"
+  "The password is"
+  "Private information:"
+
+define bot unsafe_code_generation
+  "os.system("
+  "subprocess.call("
+  "exec("
+  "eval("
+  "__import__('os')"
+
+# Define output safety flows
+define flow prevent_harmful_output
+  bot harmful_content_generation
+  bot refuse_harmful_request
+
+define flow prevent_data_leakage  
+  bot sensitive_info_leakage
+  bot say "I've removed potentially sensitive information from my response for your privacy."
+
+define flow prevent_unsafe_code
+  bot unsafe_code_generation
+  bot say "I've modified the code to ensure it's safe for execution in our sandbox environment."
