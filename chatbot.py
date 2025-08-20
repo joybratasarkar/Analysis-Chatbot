@@ -92,28 +92,42 @@ class SecureAIChatbot:
         Requirements:
         1. Use only pandas, numpy, matplotlib, and plotly (px, go)
         2. The DataFrame is already loaded as 'df'
-        3. Generate appropriate plots based on the data and request
-        4. Include error handling
-        5. For matplotlib: save to BytesIO buffer and convert to base64, store in 'plot_base64'
-        6. For plotly: use fig.to_html() and store in 'plot_base64'
-        7. Do not use any file I/O operations
-        8. Do not import any modules not in the allowed list
+        3. ALWAYS generate a visualization, even for specific person queries
+        4. For specific person queries: create a visualization that shows their position relative to others
+        5. Include error handling with try/except blocks
+        6. For matplotlib: save to BytesIO buffer and convert to base64, store in 'plot_base64'
+        7. For plotly: use fig.to_html() and store in 'plot_base64'
+        8. Do not use any file I/O operations
+        9. Do not import any modules not in the allowed list
+        
+        Special handling for person-specific queries:
+        - If asking about a specific person, create a scatter plot highlighting that person
+        - Use different colors or markers to make the person stand out
+        - Include relevant context like department, salary range, etc.
         
         Example for matplotlib:
         ```python
-        plt.figure(figsize=(10,6))
-        plt.scatter(df['x'], df['y'])
-        buf = BytesIO()
-        plt.savefig(buf, format='png', bbox_inches='tight')
-        buf.seek(0)
-        plot_base64 = base64.b64encode(buf.getvalue()).decode()
-        plt.close()
+        try:
+            plt.figure(figsize=(10,6))
+            plt.scatter(df['age'], df['salary'], alpha=0.6, label='Others')
+            # Highlight specific person if mentioned
+            buf = BytesIO()
+            plt.savefig(buf, format='png', bbox_inches='tight')
+            buf.seek(0)
+            plot_base64 = base64.b64encode(buf.getvalue()).decode()
+            plt.close()
+        except Exception as e:
+            plot_base64 = None
         ```
         
         Example for plotly:
         ```python
-        fig = px.scatter(df, x='x', y='y')
-        plot_base64 = fig.to_html()
+        try:
+            fig = px.scatter(df, x='age', y='salary', color='department', 
+                           hover_data=['name'], title='Employee Data')
+            plot_base64 = fig.to_html()
+        except Exception as e:
+            plot_base64 = None
         ```
         
         Generate clean, secure Python code only. No explanations.
@@ -121,7 +135,30 @@ class SecureAIChatbot:
         
         try:
             response = await asyncio.wait_for(llm.ainvoke([HumanMessage(content=prompt)]), timeout=30.0)
-            state["generated_code"] = response.content.strip()
+            raw_code = response.content.strip()
+            
+            # Clean up the generated code (remove markdown code blocks if present)
+            if raw_code.startswith('```python'):
+                # Extract code from markdown code block
+                lines = raw_code.split('\n')
+                code_lines = []
+                in_code_block = False
+                for line in lines:
+                    if line.strip() == '```python':
+                        in_code_block = True
+                        continue
+                    elif line.strip() == '```' and in_code_block:
+                        break
+                    elif in_code_block:
+                        code_lines.append(line)
+                state["generated_code"] = '\n'.join(code_lines)
+            elif raw_code.startswith('```'):
+                # Handle generic code blocks
+                lines = raw_code.split('\n')[1:-1]  # Remove first and last lines
+                state["generated_code"] = '\n'.join(lines)
+            else:
+                state["generated_code"] = raw_code
+                
         except asyncio.TimeoutError:
             state["generated_code"] = None
             state["plot_result"] = "Error: Code generation timed out"
@@ -156,31 +193,46 @@ class SecureAIChatbot:
                     'max': max, 'min': min, 'sum': sum, 'abs': abs,
                     'round': round, 'sorted': sorted, 'print': print,
                     'isinstance': isinstance, 'hasattr': hasattr, 'getattr': getattr,
-                    'TypeError': TypeError, 'ValueError': ValueError, 'IndexError': IndexError
+                    'TypeError': TypeError, 'ValueError': ValueError, 'IndexError': IndexError,
+                    'Exception': Exception, 'KeyError': KeyError, 'AttributeError': AttributeError,
+                    '__import__': __import__, '__build_class__': __build_class__, '__name__': __name__
                 }
             }
             
             # Execute code in restricted environment
+            print(f"Executing code: {state['generated_code'][:200]}...")  # Debug print
             exec(state["generated_code"], safe_globals)
             
             # Capture plot if created
             plot_type = None
-            if 'plot_base64' in safe_globals:
-                state["plot_result"] = safe_globals['plot_base64']
-                plot_type = "plotly" if safe_globals['plot_base64'].startswith('<') else "matplotlib"
-            else:
-                # Check if there are any matplotlib figures
-                if plt.get_fignums():
-                    # Try to capture matplotlib plot
+            plot_result = None
+            
+            # Check for plot_base64 variable (primary method)
+            if 'plot_base64' in safe_globals and safe_globals['plot_base64']:
+                plot_result = safe_globals['plot_base64']
+                plot_type = "plotly" if plot_result.startswith('<') else "matplotlib"
+                print(f"Found plot_base64 variable: {plot_type}")
+            
+            # Check for any matplotlib figures (fallback method)
+            elif plt.get_fignums():
+                print("Found matplotlib figures, capturing...")
+                try:
                     buf = BytesIO()
-                    plt.savefig(buf, format='png', bbox_inches='tight')
+                    plt.savefig(buf, format='png', bbox_inches='tight', dpi=100)
                     buf.seek(0)
-                    plot_base64 = base64.b64encode(buf.getvalue()).decode()
-                    state["plot_result"] = plot_base64
+                    plot_result = base64.b64encode(buf.getvalue()).decode()
                     plot_type = "matplotlib"
+                    print(f"Matplotlib plot captured, size: {len(plot_result)} chars")
+                except Exception as save_error:
+                    print(f"Error saving matplotlib plot: {save_error}")
+                    plot_result = None
+                finally:
                     plt.close('all')
-                else:
-                    state["plot_result"] = None
+            else:
+                print("No plots found")
+                plot_result = None
+                
+            state["plot_result"] = plot_result
             
             # Log successful execution
             execution_time = time.time() - start_time
@@ -308,7 +360,11 @@ class SecureAIChatbot:
     async def _respond(self, state: ChatState) -> ChatState:
         """Generate final response to user"""
         if state["analysis_summary"] and state["plot_result"]:
-            response = f"{state['analysis_summary']}\n\n[Plot generated and ready for display]"
+            response = f"{state['analysis_summary']}\n\n[Visualization generated showing the analysis]"
+        elif state["analysis_summary"]:
+            response = f"{state['analysis_summary']}"
+        elif state["plot_result"]:
+            response = "I've generated a visualization based on your request."
         elif state["data"] is None:
             response = "Hello! I'm your AI data analysis assistant. I can help you analyze CSV data, create visualizations, and provide insights. Please upload a CSV file to get started!"
         else:

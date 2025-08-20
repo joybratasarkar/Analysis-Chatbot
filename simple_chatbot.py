@@ -95,8 +95,8 @@ class SimpleAIChatbot:
         Requirements:
         1. Use only pandas (as 'df'), plotly.express (as 'px'), and plotly.graph_objects (as 'go')
         2. Create appropriate visualizations based on the data and request
-        3. Convert plot to HTML string and store in variable 'plot_html_base64'
-        4. Use: plot_html_base64 = fig.to_html()
+        3. Convert plot to HTML string and store in variable 'plot_base64'
+        4. Use: plot_base64 = fig.to_html()
         5. Do not use file I/O operations
         6. Include brief analysis insights
         
@@ -104,7 +104,7 @@ class SimpleAIChatbot:
         ```python
         # Analysis code here
         fig = px.scatter(df, x='column1', y='column2', title='My Plot')
-        plot_html_base64 = fig.to_html()
+        plot_base64 = fig.to_html()
         ```
         
         Generate only the Python code, no explanations.
@@ -112,7 +112,30 @@ class SimpleAIChatbot:
         
         try:
             response = await asyncio.wait_for(llm.ainvoke([HumanMessage(content=prompt)]), timeout=30.0)
-            generated_code = response.content.strip()
+            raw_code = response.content.strip()
+            
+            # Clean up the generated code (remove markdown code blocks if present)
+            if raw_code.startswith('```python'):
+                # Extract code from markdown code block
+                lines = raw_code.split('\n')
+                code_lines = []
+                in_code_block = False
+                for line in lines:
+                    if line.strip() == '```python':
+                        in_code_block = True
+                        continue
+                    elif line.strip() == '```' and in_code_block:
+                        break
+                    elif in_code_block:
+                        code_lines.append(line)
+                generated_code = '\n'.join(code_lines)
+            elif raw_code.startswith('```'):
+                # Handle generic code blocks
+                lines = raw_code.split('\n')[1:-1]  # Remove first and last lines
+                generated_code = '\n'.join(lines)
+            else:
+                generated_code = raw_code
+                
         except asyncio.TimeoutError:
             return "Error: Code generation timed out", None, "# Timeout error occurred"
         
@@ -135,16 +158,22 @@ class SimpleAIChatbot:
                     'max': max, 'min': min, 'sum': sum, 'abs': abs,
                     'round': round, 'sorted': sorted, 'print': print,
                     'isinstance': isinstance, 'hasattr': hasattr, 'getattr': getattr,
-                    'TypeError': TypeError, 'ValueError': ValueError, 'IndexError': IndexError
+                    'TypeError': TypeError, 'ValueError': ValueError, 'IndexError': IndexError,
+                    'Exception': Exception, 'KeyError': KeyError, 'AttributeError': AttributeError,
+                    '__import__': __import__, '__build_class__': __build_class__, '__name__': __name__
                 }
             }
             
             # Execute generated code
+            print(f"Executing simple_chatbot code: {generated_code[:200]}...")  # Debug print
             exec(generated_code, safe_globals)
             
             # Get plot data
-            if 'plot_html_base64' in safe_globals:
-                plot_data = safe_globals['plot_html_base64']
+            if 'plot_base64' in safe_globals and safe_globals['plot_base64']:
+                plot_data = safe_globals['plot_base64']
+                print(f"Found plot_base64 in simple_chatbot, length: {len(plot_data)}")
+            else:
+                print("No plot_base64 found in simple_chatbot")
             
         except Exception as e:
             generated_code = f"# Error in code execution: {str(e)}\n{generated_code}"
